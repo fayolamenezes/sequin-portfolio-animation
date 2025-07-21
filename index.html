@@ -85,12 +85,7 @@
   function createCards(container, reversed = false) {
     const inner = container.querySelector('.carousel-inner');
     const classes = reversed ? [...cardClasses].reverse() : cardClasses;
-    classes.forEach(cls => {
-      const card = document.createElement('div');
-      card.className = `card ${cls}`;
-      inner.appendChild(card);
-    });
-    classes.forEach(cls => {
+    [...classes, ...classes].forEach(cls => {
       const card = document.createElement('div');
       card.className = `card ${cls}`;
       inner.appendChild(card);
@@ -139,10 +134,10 @@
   // Drag Logic
   let isDragging = false;
   let startY = 0;
-  let currentCarousel, oppositeCarousel;
   let currentY = 0;
   let lastDelta = 0;
-
+  let totalDelta = 0;
+  let currentCarousel, oppositeCarousel;
   let rafID = null;
 
   const carousels = document.querySelectorAll('.carousel');
@@ -152,6 +147,7 @@
     const onDragStart = e => {
       isDragging = true;
       startY = e.touches ? e.touches[0].clientY : e.clientY;
+      totalDelta = 0;
       currentCarousel = inner;
       oppositeCarousel = currentCarousel === document.querySelector('#carousel1 .carousel-inner')
         ? document.querySelector('#carousel2 .carousel-inner')
@@ -168,6 +164,7 @@
       if (!isDragging) return;
       currentY = e.touches ? e.touches[0].clientY : e.clientY;
       lastDelta = currentY - startY;
+      totalDelta += lastDelta;
     };
 
     const updateDrag = () => {
@@ -182,51 +179,64 @@
     };
 
     const onDragEnd = () => {
-    if (!isDragging) return;
-    isDragging = false;
-    cancelAnimationFrame(rafID);
+      if (!isDragging) return;
+      isDragging = false;
+      cancelAnimationFrame(rafID);
 
-    const currentY1 = gsap.getProperty(document.querySelector('#carousel1 .carousel-inner'), 'y');
-    const currentY2 = gsap.getProperty(document.querySelector('#carousel2 .carousel-inner'), 'y');
-    const totalHeight = cardHeight * (cardClasses.length * 2); // full set
+      const totalHeight = cardHeight * (cardClasses.length * 2);
+      const direction = totalDelta < 0 ? 'up' : 'down';
+      const duration = 25;
 
-    // Kill previous animations
-    anim1?.kill();
-    anim2?.kill();
+      const currentYDragged = gsap.getProperty(currentCarousel, 'y');
+      const currentYOpposite = gsap.getProperty(oppositeCarousel, 'y');
 
-    const direction = lastDelta < 0 ? 'up' : 'down';
-    const duration = 25;
+      // Clamp ratios to prevent very slow speeds
+      const ratio1 = Math.max(0.2, 1 - Math.abs(currentYDragged) / totalHeight);
+      const ratio2 = Math.max(0.2, 1 - Math.abs(currentYOpposite) / totalHeight);
 
-    // Resume animation from current position
-    anim1 = gsap.to('#carousel1 .carousel-inner', {
-        y: direction === 'up' ? -totalHeight : 0,
-        from: currentY1,
-        ease: 'none',
-        duration: duration * (1 - Math.abs(currentY1) / totalHeight),
-        repeat: -1,
-    });
+      anim1?.kill();
+      anim2?.kill();
 
-    anim2 = gsap.to('#carousel2 .carousel-inner', {
-        y: direction === 'up' ? 0 : -totalHeight,
-        from: currentY2,
-        ease: 'none',
-        duration: duration * (1 - Math.abs(currentY2) / totalHeight),
-        repeat: -1,
-    });
+      if (currentCarousel === document.querySelector('#carousel1 .carousel-inner')) {
+        anim1 = gsap.to(currentCarousel, {
+          y: direction === 'up' ? -totalHeight : 0,
+          ease: 'none',
+          duration: duration * ratio1,
+          repeat: -1,
+        });
+
+        anim2 = gsap.to(oppositeCarousel, {
+          y: direction === 'up' ? 0 : -totalHeight,
+          ease: 'none',
+          duration: duration * ratio2,
+          repeat: -1,
+        });
+      } else {
+        anim2 = gsap.to(currentCarousel, {
+          y: direction === 'up' ? -totalHeight : 0,
+          ease: 'none',
+          duration: duration * ratio1,
+          repeat: -1,
+        });
+
+        anim1 = gsap.to(oppositeCarousel, {
+          y: direction === 'up' ? 0 : -totalHeight,
+          ease: 'none',
+          duration: duration * ratio2,
+          repeat: -1,
+        });
+      }
     };
 
-    // Events
     carousel.addEventListener('mousedown', onDragStart);
     carousel.addEventListener('mousemove', onDragMove);
     carousel.addEventListener('mouseup', onDragEnd);
     carousel.addEventListener('mouseleave', onDragEnd);
-
     carousel.addEventListener('touchstart', onDragStart);
     carousel.addEventListener('touchmove', onDragMove);
     carousel.addEventListener('touchend', onDragEnd);
   });
 </script>
-
 
 </body>
 </html>
