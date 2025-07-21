@@ -71,10 +71,12 @@
   </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ModifiersPlugin.min.js"></script>
-<script> gsap.registerPlugin(ModifiersPlugin); </script>
 <script>
+  gsap.registerPlugin(ModifiersPlugin);
+
   const cardClasses = ['c1', 'c2', 'c3', 'c4', 'c5'];
   let anim1, anim2;
+  let isHovering = false;
 
   function createCards(container, reversed = false) {
     const inner = container.querySelector('.carousel-inner');
@@ -117,10 +119,12 @@
   // Hover Pause
   const wrapper = document.querySelector('.carousel-wrapper');
   wrapper.addEventListener('mouseenter', () => {
+    isHovering = true;
     anim1.pause();
     anim2.pause();
   });
   wrapper.addEventListener('mouseleave', () => {
+    isHovering = false;
     anim1.play();
     anim2.play();
   });
@@ -192,54 +196,57 @@
       rafID = requestAnimationFrame(updateDrag);
     };
 
-const onDragEnd = () => {
-  if (!isDragging) return;
-  isDragging = false;
-  cancelAnimationFrame(rafID);
+    const onDragEnd = () => {
+      if (!isDragging) return;
+      isDragging = false;
+      cancelAnimationFrame(rafID);
 
-  const endTime = Date.now();
-  const elapsed = (endTime - startTime) / 1000;
-  const velocity = totalDelta / elapsed;
+      const endTime = Date.now();
+      const elapsed = (endTime - startTime) / 1000;
+      const velocity = totalDelta / elapsed;
+      const direction = velocity < 0 ? 'up' : 'down';
 
-  const direction = velocity < 0 ? 'up' : 'down';
+      const wrapY = y => {
+        const totalHeight = cardHeight * (cardClasses.length * 2);
+        let val = parseFloat(y) % totalHeight;
+        return val > 0 ? val - totalHeight : val;
+      };
 
-  const wrapY = y => {
-    const totalHeight = cardHeight * (cardClasses.length * 2);
-    let val = parseFloat(y) % totalHeight;
-    return val > 0 ? val - totalHeight : val;
-  };
+      const duration = 25;
+      anim1?.kill();
+      anim2?.kill();
 
-  const duration = 25;
+      const currentSelector = currentCarousel.closest('.carousel').id;
 
-  // Kill existing animations
-  anim1?.kill();
-  anim2?.kill();
+      const getAnim = (selector, dir) =>
+        gsap.to(`#${selector} .carousel-inner`, {
+          y: dir === 'up' ? `-=${cardHeight}` : `+=${cardHeight}`,
+          duration,
+          ease: "none",
+          repeat: -1,
+          modifiers: {
+            y: gsap.utils.unitize(wrapY)
+          }
+        });
 
-  // Assign animations based on which was dragged
-  const currentSelector = currentCarousel.closest('.carousel').id;
-  const oppositeSelector = oppositeCarousel.closest('.carousel').id;
-
-  const getAnim = (selector, dir) =>
-    gsap.to(`#${selector} .carousel-inner`, {
-      y: dir === 'up' ? `-=${cardHeight}` : `+=${cardHeight}`,
-      duration,
-      ease: "none",
-      repeat: -1,
-      modifiers: {
-        y: gsap.utils.unitize(wrapY)
+      if (currentSelector === 'carousel1') {
+        anim1 = getAnim('carousel1', direction);
+        anim2 = getAnim('carousel2', direction === 'up' ? 'down' : 'up');
+      } else {
+        anim2 = getAnim('carousel2', direction);
+        anim1 = getAnim('carousel1', direction === 'up' ? 'down' : 'up');
       }
-    });
 
-  if (currentSelector === 'carousel1') {
-    anim1 = getAnim('carousel1', direction);
-    anim2 = getAnim('carousel2', direction === 'up' ? 'down' : 'up');
-  } else {
-    anim2 = getAnim('carousel2', direction);
-    anim1 = getAnim('carousel1', direction === 'up' ? 'down' : 'up');
-  }
-};
+        if (isHovering) {
+        anim1.pause();
+        anim2.pause();
+        } else {
+        anim1.play();
+        anim2.play();
+        }
+    };
 
-
+    // Events
     carousel.addEventListener('mousedown', onDragStart);
     carousel.addEventListener('mousemove', onDragMove);
     carousel.addEventListener('mouseup', onDragEnd);
@@ -249,6 +256,7 @@ const onDragEnd = () => {
     carousel.addEventListener('touchend', onDragEnd);
   });
 </script>
+
 
 </body>
 </html>
