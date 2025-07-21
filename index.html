@@ -18,13 +18,18 @@
       justify-content: center;
       align-items: center;
       height: 100vh;
-      gap: 2px;
       overflow: hidden;
     }
 
+    .carousel-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
     .carousel {
-      width: 300px;
-      height: 591px;
+      width: 290px;
+      height: 100vh;
       overflow: hidden;
       position: relative;
     }
@@ -42,7 +47,7 @@
       width: 280px;
       height: 450px;
       flex-shrink: 0;
-      margin: 10px auto;
+      margin: 5px auto;
     }
 
     /* Color samples */
@@ -55,29 +60,30 @@
 </head>
 <body>
 
-  <div class="carousel" id="carousel1">
-    <div class="carousel-inner"></div>
-  </div>
+  <div class="carousel-wrapper">
+    <div class="carousel" id="carousel1">
+      <div class="carousel-inner"></div>
+    </div>
 
-  <div class="carousel" id="carousel2">
-    <div class="carousel-inner"></div>
+    <div class="carousel" id="carousel2">
+      <div class="carousel-inner"></div>
+    </div>
   </div>
 
   <script>
     const cardClasses = ['c1', 'c2', 'c3', 'c4', 'c5'];
+    let anim1, anim2;
 
     function createCards(container, reversed = false) {
       const inner = container.querySelector('.carousel-inner');
       const classes = reversed ? [...cardClasses].reverse() : cardClasses;
 
-      // Add original set
       classes.forEach(cls => {
         const card = document.createElement('div');
         card.className = `card ${cls}`;
         inner.appendChild(card);
       });
 
-      // Add duplicate set for seamless looping
       classes.forEach(cls => {
         const card = document.createElement('div');
         card.className = `card ${cls}`;
@@ -85,8 +91,8 @@
       });
     }
 
-    createCards(document.getElementById('carousel1'), false); // normal order
-    createCards(document.getElementById('carousel2'), true);  // reverse order
+    createCards(document.getElementById('carousel1'), false);
+    createCards(document.getElementById('carousel2'), true);
 
     function startVerticalLoop(containerSelector, duration = 15, direction = 'up') {
       const container = document.querySelector(containerSelector + ' .carousel-inner');
@@ -95,7 +101,7 @@
 
       gsap.set(container, { y: direction === 'up' ? 0 : -(cardHeight * cardCount) });
 
-      gsap.to(container, {
+      return gsap.to(container, {
         y: direction === 'up' ? -(cardHeight * cardCount) : 0,
         ease: "none",
         duration: duration,
@@ -103,8 +109,20 @@
       });
     }
 
-    startVerticalLoop("#carousel1", 25, 'up');
-    startVerticalLoop("#carousel2", 25, 'down');
+    anim1 = startVerticalLoop("#carousel1", 25, 'up');
+    anim2 = startVerticalLoop("#carousel2", 25, 'down');
+
+    // Pause on hover of the wrapper (includes both carousels and gap)
+    const wrapper = document.querySelector(".carousel-wrapper");
+    wrapper.addEventListener("mouseenter", () => {
+      anim1.pause();
+      anim2.pause();
+    });
+    wrapper.addEventListener("mouseleave", () => {
+      anim1.play();
+      anim2.play();
+    });
   </script>
+
 </body>
 </html>
