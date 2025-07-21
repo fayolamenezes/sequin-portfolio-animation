@@ -2,53 +2,48 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Vertical Infinite Carousel</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mobile GSAP Carousel</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ModifiersPlugin.min.js"></script>
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    body {
-      background: #f0f0f0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
+    html, body {
+      height: 100%;
+      width: 100%;
       overflow: hidden;
     }
 
     .carousel-wrapper {
+      width: 100%;
+      height: 100%;
       display: flex;
       justify-content: center;
       align-items: center;
+      overflow: hidden;
     }
 
     .carousel {
-      width: 290px;
-      height: 100vh;
+      width: 100%;
+      height: 100%;
       overflow: hidden;
       position: relative;
     }
 
     .carousel-inner {
       display: flex;
-      flex-direction: column;
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
+      flex-direction: row;
+      align-items: center;
+      height: 100%;
+      width: auto;
     }
 
     .card {
-      width: 280px;
-      height: 450px;
+      width: 200px;
+      height: 350px;
       flex-shrink: 0;
-      margin: 5px auto;
+      margin: 0 5px;
     }
 
     .c1 { background: #5a1010; }
@@ -61,11 +56,7 @@
 <body>
 
 <div class="carousel-wrapper">
-  <div class="carousel" id="carousel1">
-    <div class="carousel-inner"></div>
-  </div>
-
-  <div class="carousel" id="carousel2">
+  <div class="carousel" id="carousel">
     <div class="carousel-inner"></div>
   </div>
 </div>
@@ -73,195 +64,97 @@
 <script>
   gsap.registerPlugin(ModifiersPlugin);
 
+  const container = document.querySelector('.carousel-inner');
   const cardClasses = ['c1', 'c2', 'c3', 'c4', 'c5'];
-  let anim1, anim2;
-  let isHovering = false;
-  const cardHeight = 460;
-  const totalSets = 10; // tripled cards
-  const totalHeight = cardHeight * cardClasses.length * totalSets;
+  const totalSets = 10;
 
-  function createCards(container, reversed = false) {
-    const inner = container.querySelector('.carousel-inner');
-    const classes = reversed ? [...cardClasses].reverse() : cardClasses;
-    Array(totalSets).fill().forEach(() => {
-      classes.forEach(cls => {
-        const card = document.createElement('div');
-        card.className = `card ${cls}`;
-        inner.appendChild(card);
-      });
+  // Generate cards
+  for (let i = 0; i < totalSets; i++) {
+    cardClasses.forEach(cls => {
+      const card = document.createElement('div');
+      card.className = `card ${cls}`;
+      container.appendChild(card);
     });
   }
 
-  createCards(document.getElementById('carousel1'), false);
-  createCards(document.getElementById('carousel2'), true);
+  // Mobile-only horizontal autoplay + drag carousel
+  const totalWidth = container.scrollWidth;
+  gsap.set(container, { x: -totalWidth / 2 });
 
-function startVerticalLoop(selector, duration = 15, direction = 'up') {
-  const el = document.querySelector(selector + ' .carousel-inner');
-
-  // Set to start from the middle of the repeated sets
-  const midpointOffset = -totalHeight / 2;
-  gsap.set(el, { y: midpointOffset });
-
-  return gsap.to(el, {
-    y: direction === 'up' ? `-=${totalHeight}` : `+=${totalHeight}`,
-    ease: 'none',
-    duration,
-    repeat: -1,
-    modifiers: {
-      y: gsap.utils.unitize(y => {
-        let val = parseFloat(y) % totalHeight;
-        return val > 0 ? val - totalHeight : val;
-      })
-    }
-  });
-}
-
-  function updateDirection(direction) {
-    anim1?.kill();
-    anim2?.kill();
-    anim1 = startVerticalLoop('#carousel1', 25, direction);
-    anim2 = startVerticalLoop('#carousel2', 25, direction === 'up' ? 'down' : 'up');
-  }
-
-  anim1 = startVerticalLoop('#carousel1', 140, 'up');
-  anim2 = startVerticalLoop('#carousel2', 140, 'down');
-
-  // Hover Pause
-  const wrapper = document.querySelector('.carousel-wrapper');
-  wrapper.addEventListener('mouseenter', () => {
-    isHovering = true;
-    anim1.pause();
-    anim2.pause();
-  });
-  wrapper.addEventListener('mouseleave', () => {
-    isHovering = false;
-    anim1.play();
-    anim2.play();
-  });
-
-  // Drag Logic
+  let autoAnim = null;
+  let direction = -1; // -1 for left, +1 for right
   let isDragging = false;
-  let startY = 0;
-  let currentY = 0;
+  let startX = 0;
+  let velocity = 0;
   let lastDelta = 0;
-  let totalDelta = 0;
-  let startTime = 0;
-  let currentCarousel, oppositeCarousel;
-  let rafID = null;
+  let rafID;
 
-  const carousels = document.querySelectorAll('.carousel');
-  carousels.forEach(carousel => {
-    const inner = carousel.querySelector('.carousel-inner');
+  const wrapX = x => {
+    let val = parseFloat(x) % totalWidth;
+    return val > 0 ? val - totalWidth : val;
+  };
 
-    const onDragStart = e => {
-      isDragging = true;
-      startY = e.touches ? e.touches[0].clientY : e.clientY;
-      totalDelta = 0;
-      startTime = Date.now();
-      currentCarousel = inner;
-      oppositeCarousel = currentCarousel === document.querySelector('#carousel1 .carousel-inner')
-        ? document.querySelector('#carousel2 .carousel-inner')
-        : document.querySelector('#carousel1 .carousel-inner');
-
-      anim1.pause();
-      anim2.pause();
-
-      cancelAnimationFrame(rafID);
-      rafID = requestAnimationFrame(updateDrag);
-    };
-
-    const onDragMove = e => {
-      if (!isDragging) return;
-      currentY = e.touches ? e.touches[0].clientY : e.clientY;
-      lastDelta = currentY - startY;
-      totalDelta += lastDelta;
-    };
-
-    const updateDrag = () => {
-      if (!isDragging) return;
-      if (lastDelta !== 0) {
-        let newYCurrent = gsap.getProperty(currentCarousel, 'y') + lastDelta;
-        let newYOpposite = gsap.getProperty(oppositeCarousel, 'y') - lastDelta;
-
-        const wrapY = y => {
-          let val = parseFloat(y) % totalHeight;
-          return val > 0 ? val - totalHeight : val;
-        };
-
-        if (newYCurrent <= -totalHeight) newYCurrent += totalHeight;
-        if (newYCurrent >= 0) newYCurrent -= totalHeight;
-        if (newYOpposite <= -totalHeight) newYOpposite += totalHeight;
-        if (newYOpposite >= 0) newYOpposite -= totalHeight;
-
-        gsap.set(currentCarousel, { y: newYCurrent });
-        gsap.set(oppositeCarousel, { y: newYOpposite });
-
-        startY = currentY;
-        lastDelta = 0;
+  const startAutoScroll = () => {
+    if (autoAnim) autoAnim.kill();
+    autoAnim = gsap.to(container, {
+      x: `${direction === -1 ? '-=' : '+='}${totalWidth}`,
+      duration: 100,
+      ease: 'none',
+      repeat: -1,
+      modifiers: {
+        x: gsap.utils.unitize(wrapX)
       }
-      rafID = requestAnimationFrame(updateDrag);
-    };
+    });
+  };
 
-    const onDragEnd = () => {
-      if (!isDragging) return;
-      isDragging = false;
-      cancelAnimationFrame(rafID);
+  startAutoScroll();
 
-      const endTime = Date.now();
-      const elapsed = (endTime - startTime) / 1000;
-      const velocity = totalDelta / elapsed;
-      const direction = velocity < 0 ? 'up' : 'down';
+  const updateDrag = () => {
+    if (!isDragging) return;
+    const x = gsap.getProperty(container, 'x') || 0;
+    let newX = wrapX(x + lastDelta);
+    gsap.set(container, { x: newX });
+    velocity = lastDelta;
+    lastDelta = 0;
+    rafID = requestAnimationFrame(updateDrag);
+  };
 
-      const wrapY = y => {
-        let val = parseFloat(y) % totalHeight;
-        return val > 0 ? val - totalHeight : val;
-      };
+  const startDrag = e => {
+    isDragging = true;
+    startX = e.touches ? e.touches[0].clientX : e.clientX;
+    if (autoAnim) autoAnim.pause();
+    cancelAnimationFrame(rafID);
+    rafID = requestAnimationFrame(updateDrag);
+  };
 
-      const duration = 25;
-      anim1?.kill();
-      anim2?.kill();
+  const drag = e => {
+    if (!isDragging) return;
+    const currentX = e.touches ? e.touches[0].clientX : e.clientX;
+    lastDelta = currentX - startX;
+    startX = currentX;
+  };
 
-      const currentSelector = currentCarousel.closest('.carousel').id;
+  const endDrag = () => {
+    isDragging = false;
+    cancelAnimationFrame(rafID);
+    direction = velocity < 0 ? -1 : 1;
+    gsap.to(container, {
+      x: `+=${velocity * 20}`,
+      duration: 1,
+      ease: "power2.out",
+      modifiers: { x: gsap.utils.unitize(wrapX) },
+      onComplete: startAutoScroll
+    });
+  };
 
-      const getAnim = (selector, dir) =>
-        gsap.to(`#${selector} .carousel-inner`, {
-          y: dir === 'up'
-            ? `-=${cardHeight * cardClasses.length}`
-            : `+=${cardHeight * cardClasses.length}`,
-          duration,
-          ease: "none",
-          repeat: -1,
-          modifiers: {
-            y: gsap.utils.unitize(wrapY)
-          }
-        });
-
-      if (currentSelector === 'carousel1') {
-        anim1 = getAnim('carousel1', direction);
-        anim2 = getAnim('carousel2', direction === 'up' ? 'down' : 'up');
-      } else {
-        anim2 = getAnim('carousel2', direction);
-        anim1 = getAnim('carousel1', direction === 'up' ? 'down' : 'up');
-      }
-
-      if (isHovering) {
-        anim1.pause();
-        anim2.pause();
-      } else {
-        anim1.play();
-        anim2.play();
-      }
-    };
-
-    // Events
-    carousel.addEventListener('mousedown', onDragStart);
-    carousel.addEventListener('mousemove', onDragMove);
-    carousel.addEventListener('mouseup', onDragEnd);
-    carousel.addEventListener('mouseleave', onDragEnd);
-    carousel.addEventListener('touchstart', onDragStart);
-    carousel.addEventListener('touchmove', onDragMove);
-    carousel.addEventListener('touchend', onDragEnd);
-  });
+  const el = document.querySelector('.carousel');
+  el.addEventListener('mousedown', startDrag);
+  el.addEventListener('mousemove', drag);
+  el.addEventListener('mouseup', endDrag);
+  el.addEventListener('mouseleave', endDrag);
+  el.addEventListener('touchstart', startDrag);
+  el.addEventListener('touchmove', drag);
+  el.addEventListener('touchend', endDrag);
 </script>
 </body>
 </html>
