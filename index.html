@@ -50,6 +50,14 @@
       margin: 5px auto;
     }
 
+    .carousel {
+    cursor: grab;
+    }
+
+    .carousel:active {
+    cursor: grabbing;
+    }
+
     /* Color samples */
     .c1 { background: #5a1010; }
     .c2 { background: #0b2b40; }
@@ -92,7 +100,7 @@
   createCards(document.getElementById('carousel1'), false);
   createCards(document.getElementById('carousel2'), true);
 
-  const cardHeight = 591;
+  const cardHeight = 460;
 
   function startVerticalLoop(selector, duration = 15, direction = 'up') {
     const el = document.querySelector(selector + ' .carousel-inner');
@@ -174,12 +182,37 @@
     };
 
     const onDragEnd = () => {
-      if (!isDragging) return;
-      isDragging = false;
-      cancelAnimationFrame(rafID);
+    if (!isDragging) return;
+    isDragging = false;
+    cancelAnimationFrame(rafID);
 
-      const direction = lastDelta < 0 ? 'up' : 'down';
-      updateDirection(direction);
+    const currentY1 = gsap.getProperty(document.querySelector('#carousel1 .carousel-inner'), 'y');
+    const currentY2 = gsap.getProperty(document.querySelector('#carousel2 .carousel-inner'), 'y');
+    const totalHeight = cardHeight * (cardClasses.length * 2); // full set
+
+    // Kill previous animations
+    anim1?.kill();
+    anim2?.kill();
+
+    const direction = lastDelta < 0 ? 'up' : 'down';
+    const duration = 25;
+
+    // Resume animation from current position
+    anim1 = gsap.to('#carousel1 .carousel-inner', {
+        y: direction === 'up' ? -totalHeight : 0,
+        from: currentY1,
+        ease: 'none',
+        duration: duration * (1 - Math.abs(currentY1) / totalHeight),
+        repeat: -1,
+    });
+
+    anim2 = gsap.to('#carousel2 .carousel-inner', {
+        y: direction === 'up' ? 0 : -totalHeight,
+        from: currentY2,
+        ease: 'none',
+        duration: duration * (1 - Math.abs(currentY2) / totalHeight),
+        repeat: -1,
+    });
     };
 
     // Events
