@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Vertical Infinite Carousel</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: #f0f0f0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      gap: 2px;
+      overflow: hidden;
+    }
+
+    .carousel {
+      width: 300px;
+      height: 591px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .carousel-inner {
+      display: flex;
+      flex-direction: column;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+    }
+
+    .card {
+      width: 280px;
+      height: 450px;
+      flex-shrink: 0;
+      margin: 10px auto;
+    }
+
+    /* Color samples */
+    .c1 { background: #5a1010; }
+    .c2 { background: #0b2b40; }
+    .c3 { background: #6a5a0e; }
+    .c4 { background: #062b10; }
+    .c5 { background: #24084a; }
+  </style>
+</head>
+<body>
+
+  <div class="carousel" id="carousel1">
+    <div class="carousel-inner"></div>
+  </div>
+
+  <div class="carousel" id="carousel2">
+    <div class="carousel-inner"></div>
+  </div>
+
+  <script>
+    const cardClasses = ['c1', 'c2', 'c3', 'c4', 'c5'];
+
+    function createCards(container, reversed = false) {
+      const inner = container.querySelector('.carousel-inner');
+      const classes = reversed ? [...cardClasses].reverse() : cardClasses;
+
+      // Add original set
+      classes.forEach(cls => {
+        const card = document.createElement('div');
+        card.className = `card ${cls}`;
+        inner.appendChild(card);
+      });
+
+      // Add duplicate set for seamless looping
+      classes.forEach(cls => {
+        const card = document.createElement('div');
+        card.className = `card ${cls}`;
+        inner.appendChild(card);
+      });
+    }
+
+    createCards(document.getElementById('carousel1'), false); // normal order
+    createCards(document.getElementById('carousel2'), true);  // reverse order
+
+    function startVerticalLoop(containerSelector, duration = 15, direction = 'up') {
+      const container = document.querySelector(containerSelector + ' .carousel-inner');
+      const cardCount = container.children.length / 2;
+      const cardHeight = 591;
+
+      gsap.set(container, { y: direction === 'up' ? 0 : -(cardHeight * cardCount) });
+
+      gsap.to(container, {
+        y: direction === 'up' ? -(cardHeight * cardCount) : 0,
+        ease: "none",
+        duration: duration,
+        repeat: -1,
+      });
+    }
+
+    startVerticalLoop("#carousel1", 25, 'up');
+    startVerticalLoop("#carousel2", 25, 'down');
+  </script>
+</body>
+</html>
