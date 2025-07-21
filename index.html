@@ -50,14 +50,6 @@
       margin: 5px auto;
     }
 
-    .carousel {
-    cursor: grab;
-    }
-
-    .carousel:active {
-    cursor: grabbing;
-    }
-
     /* Color samples */
     .c1 { background: #5a1010; }
     .c2 { background: #0b2b40; }
@@ -78,6 +70,8 @@
     </div>
   </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ModifiersPlugin.min.js"></script>
+<script> gsap.registerPlugin(ModifiersPlugin); </script>
 <script>
   const cardClasses = ['c1', 'c2', 'c3', 'c4', 'c5'];
   let anim1, anim2;
@@ -137,6 +131,7 @@
   let currentY = 0;
   let lastDelta = 0;
   let totalDelta = 0;
+  let startTime = 0;
   let currentCarousel, oppositeCarousel;
   let rafID = null;
 
@@ -148,6 +143,7 @@
       isDragging = true;
       startY = e.touches ? e.touches[0].clientY : e.clientY;
       totalDelta = 0;
+      startTime = Date.now();
       currentCarousel = inner;
       oppositeCarousel = currentCarousel === document.querySelector('#carousel1 .carousel-inner')
         ? document.querySelector('#carousel2 .carousel-inner')
@@ -170,63 +166,79 @@
     const updateDrag = () => {
       if (!isDragging) return;
       if (lastDelta !== 0) {
-        gsap.set(currentCarousel, { y: `+=${lastDelta}` });
-        gsap.set(oppositeCarousel, { y: `-=${lastDelta}` });
+        let newYCurrent = gsap.getProperty(currentCarousel, 'y') + lastDelta;
+        let newYOpposite = gsap.getProperty(oppositeCarousel, 'y') - lastDelta;
+
+        const totalHeight = cardHeight * (cardClasses.length * 2);
+        const wrapY = y => {
+          let val = parseFloat(y) % totalHeight;
+          return val > 0 ? val - totalHeight : val;
+        };
+
+        // Loop current carousel
+        if (newYCurrent <= -totalHeight) newYCurrent += totalHeight;
+        if (newYCurrent >= 0) newYCurrent -= totalHeight;
+
+        // Loop opposite carousel
+        if (newYOpposite <= -totalHeight) newYOpposite += totalHeight;
+        if (newYOpposite >= 0) newYOpposite -= totalHeight;
+
+        gsap.set(currentCarousel, { y: newYCurrent });
+        gsap.set(oppositeCarousel, { y: newYOpposite });
+
         startY = currentY;
         lastDelta = 0;
       }
       rafID = requestAnimationFrame(updateDrag);
     };
 
-    const onDragEnd = () => {
-      if (!isDragging) return;
-      isDragging = false;
-      cancelAnimationFrame(rafID);
+const onDragEnd = () => {
+  if (!isDragging) return;
+  isDragging = false;
+  cancelAnimationFrame(rafID);
 
-      const totalHeight = cardHeight * (cardClasses.length * 2);
-      const direction = totalDelta < 0 ? 'up' : 'down';
-      const duration = 25;
+  const endTime = Date.now();
+  const elapsed = (endTime - startTime) / 1000;
+  const velocity = totalDelta / elapsed;
 
-      const currentYDragged = gsap.getProperty(currentCarousel, 'y');
-      const currentYOpposite = gsap.getProperty(oppositeCarousel, 'y');
+  const direction = velocity < 0 ? 'up' : 'down';
 
-      // Clamp ratios to prevent very slow speeds
-      const ratio1 = Math.max(0.2, 1 - Math.abs(currentYDragged) / totalHeight);
-      const ratio2 = Math.max(0.2, 1 - Math.abs(currentYOpposite) / totalHeight);
+  const wrapY = y => {
+    const totalHeight = cardHeight * (cardClasses.length * 2);
+    let val = parseFloat(y) % totalHeight;
+    return val > 0 ? val - totalHeight : val;
+  };
 
-      anim1?.kill();
-      anim2?.kill();
+  const duration = 25;
 
-      if (currentCarousel === document.querySelector('#carousel1 .carousel-inner')) {
-        anim1 = gsap.to(currentCarousel, {
-          y: direction === 'up' ? -totalHeight : 0,
-          ease: 'none',
-          duration: duration * ratio1,
-          repeat: -1,
-        });
+  // Kill existing animations
+  anim1?.kill();
+  anim2?.kill();
 
-        anim2 = gsap.to(oppositeCarousel, {
-          y: direction === 'up' ? 0 : -totalHeight,
-          ease: 'none',
-          duration: duration * ratio2,
-          repeat: -1,
-        });
-      } else {
-        anim2 = gsap.to(currentCarousel, {
-          y: direction === 'up' ? -totalHeight : 0,
-          ease: 'none',
-          duration: duration * ratio1,
-          repeat: -1,
-        });
+  // Assign animations based on which was dragged
+  const currentSelector = currentCarousel.closest('.carousel').id;
+  const oppositeSelector = oppositeCarousel.closest('.carousel').id;
 
-        anim1 = gsap.to(oppositeCarousel, {
-          y: direction === 'up' ? 0 : -totalHeight,
-          ease: 'none',
-          duration: duration * ratio2,
-          repeat: -1,
-        });
+  const getAnim = (selector, dir) =>
+    gsap.to(`#${selector} .carousel-inner`, {
+      y: dir === 'up' ? `-=${cardHeight}` : `+=${cardHeight}`,
+      duration,
+      ease: "none",
+      repeat: -1,
+      modifiers: {
+        y: gsap.utils.unitize(wrapY)
       }
-    };
+    });
+
+  if (currentSelector === 'carousel1') {
+    anim1 = getAnim('carousel1', direction);
+    anim2 = getAnim('carousel2', direction === 'up' ? 'down' : 'up');
+  } else {
+    anim2 = getAnim('carousel2', direction);
+    anim1 = getAnim('carousel1', direction === 'up' ? 'down' : 'up');
+  }
+};
+
 
     carousel.addEventListener('mousedown', onDragStart);
     carousel.addEventListener('mousemove', onDragMove);
@@ -240,3 +252,6 @@
 
 </body>
 </html>
+
+
+
