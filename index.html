@@ -218,15 +218,17 @@
 
       const currentSelector = currentCarousel.closest('.carousel').id;
 
-      const getAnim = (selector, dir) =>
+        const getAnim = (selector, dir) =>
         gsap.to(`#${selector} .carousel-inner`, {
-          y: dir === 'up' ? `-=${cardHeight}` : `+=${cardHeight}`,
-          duration,
-          ease: "none",
-          repeat: -1,
-          modifiers: {
+            y: dir === 'up'
+            ? `-=${cardHeight * cardClasses.length}`
+            : `+=${cardHeight * cardClasses.length}`,
+            duration,
+            ease: "none",
+            repeat: -1,
+            modifiers: {
             y: gsap.utils.unitize(wrapY)
-          }
+            }
         });
 
       if (currentSelector === 'carousel1') {
