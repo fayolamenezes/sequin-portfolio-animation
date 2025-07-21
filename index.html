@@ -95,27 +95,26 @@
   createCards(document.getElementById('carousel1'), false);
   createCards(document.getElementById('carousel2'), true);
 
-  function startVerticalLoop(selector, duration = 15, direction = 'up') {
-    const el = document.querySelector(selector + ' .carousel-inner');
+function startVerticalLoop(selector, duration = 15, direction = 'up') {
+  const el = document.querySelector(selector + ' .carousel-inner');
 
-    // Start from center set
-    gsap.set(el, {
-      y: direction === 'up' ? 0 : -cardHeight * cardClasses.length
-    });
+  // Set to start from the middle of the repeated sets
+  const midpointOffset = -totalHeight / 2;
+  gsap.set(el, { y: midpointOffset });
 
-    return gsap.to(el, {
-      y: direction === 'up' ? `-=${totalHeight}` : `+=${totalHeight}`,
-      ease: 'none',
-      duration,
-      repeat: -1,
-      modifiers: {
-        y: gsap.utils.unitize(y => {
-          let val = parseFloat(y) % totalHeight;
-          return val > 0 ? val - totalHeight : val;
-        })
-      }
-    });
-  }
+  return gsap.to(el, {
+    y: direction === 'up' ? `-=${totalHeight}` : `+=${totalHeight}`,
+    ease: 'none',
+    duration,
+    repeat: -1,
+    modifiers: {
+      y: gsap.utils.unitize(y => {
+        let val = parseFloat(y) % totalHeight;
+        return val > 0 ? val - totalHeight : val;
+      })
+    }
+  });
+}
 
   function updateDirection(direction) {
     anim1?.kill();
@@ -124,8 +123,8 @@
     anim2 = startVerticalLoop('#carousel2', 25, direction === 'up' ? 'down' : 'up');
   }
 
-  anim1 = startVerticalLoop('#carousel1', 120, 'up');
-  anim2 = startVerticalLoop('#carousel2', 120, 'down');
+  anim1 = startVerticalLoop('#carousel1', 140, 'up');
+  anim2 = startVerticalLoop('#carousel2', 140, 'down');
 
   // Hover Pause
   const wrapper = document.querySelector('.carousel-wrapper');
