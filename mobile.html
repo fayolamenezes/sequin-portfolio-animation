@@ -1,59 +1,41 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Mobile GSAP Carousel</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ModifiersPlugin.min.js"></script>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+<style>
+  .carousel-wrapper {
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+  }
 
-    html, body {
-      height: 100%;
-      width: 100%;
-      overflow: hidden;
-    }
+  .carousel {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    position: relative;
+  }
 
-    .carousel-wrapper {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      overflow: hidden;
-    }
+  .carousel-inner {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    height: 100%;
+    width: auto;
+  }
 
-    .carousel {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      position: relative;
-    }
+  .card {
+    width: 200px;
+    height: 350px;
+    flex-shrink: 0;
+    margin: 0 5px;
+  }
 
-    .carousel-inner {
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      height: 100%;
-      width: auto;
-    }
-
-    .card {
-      width: 200px;
-      height: 350px;
-      flex-shrink: 0;
-      margin: 0 5px;
-    }
-
-    .c1 { background: #5a1010; }
-    .c2 { background: #0b2b40; }
-    .c3 { background: #6a5a0e; }
-    .c4 { background: #062b10; }
-    .c5 { background: #24084a; }
-  </style>
-</head>
-<body>
+  .c1 { background: #5a1010; }
+  .c2 { background: #0b2b40; }
+  .c3 { background: #6a5a0e; }
+  .c4 { background: #062b10; }
+  .c5 { background: #24084a; }
+</style>
 
 <div class="carousel-wrapper">
   <div class="carousel" id="carousel">
@@ -61,14 +43,14 @@
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ModifiersPlugin.min.js"></script>
 <script>
   gsap.registerPlugin(ModifiersPlugin);
-
   const container = document.querySelector('.carousel-inner');
   const cardClasses = ['c1', 'c2', 'c3', 'c4', 'c5'];
   const totalSets = 10;
 
-  // Generate cards
   for (let i = 0; i < totalSets; i++) {
     cardClasses.forEach(cls => {
       const card = document.createElement('div');
@@ -77,12 +59,11 @@
     });
   }
 
-  // Mobile-only horizontal autoplay + drag carousel
   const totalWidth = container.scrollWidth;
   gsap.set(container, { x: -totalWidth / 2 });
 
   let autoAnim = null;
-  let direction = -1; // -1 for left, +1 for right
+  let direction = -1;
   let isDragging = false;
   let startX = 0;
   let velocity = 0;
@@ -156,5 +137,3 @@
   el.addEventListener('touchmove', drag);
   el.addEventListener('touchend', endDrag);
 </script>
-</body>
-</html>
